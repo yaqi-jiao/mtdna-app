@@ -8,7 +8,7 @@ metadata_parser.py
 ----------------
 
 Description: 
-    This script parses and cleans the raw ancient DNA metadata file (AGDP dataset). 
+    This script parses and cleans the raw ancient DNA metadata file (AADR annotation 2025). 
     It performs the following operations:
     1. Loads the raw Excel file.
     2. Extracts essential columns required for the matching system: sample ID, age, locality, and mtDNA haplogroup.
@@ -17,7 +17,7 @@ Description:
     5. Exports the cleaned dataset as a TSV file for downstream phylogenetic analysis.
 
 Input:
-    Raw metadata in Excel format (e.g., AGDP.metadata.xlsx).
+    Raw metadata in Excel format (e.g., AADR Annotation 2025.xlsx).
 
 Output:
     A cleaned, tab-separated values file (Clean_metadata.tsv) containing only samples with valid mtDNA haplogroups.
@@ -32,30 +32,28 @@ import pandas as pd
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-input_file = os.path.join(BASE_DIR, "Data", "AGDP.metadata.xlsx")
-output_file = os.path.join(BASE_DIR, "Data", "Clean_metadata.tsv")
+input_file = os.path.join(BASE_DIR, "Data", "AADR_Annotations_2025.xlsx")
+input_dir = os.path.dirname(input_file)
+output_file = os.path.join(input_dir, "Clean_metadata_DB.tsv")
 
 print(f"Loading data: {input_file} ...")
 df = pd.read_excel(input_file)
 
 target_columns = [
-    'I-ID', 
-    'Date mean in BP [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]', 
+    'Master ID', 
+    'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]', 
     'Locality', 
-    'mtDNA haplogroup'
+    'mtDNA haplogroup if >2x or published'
 ]
 
-df = df[target_columns].rename(columns={
-    'I-ID': 'Sample_ID',
-    'Date mean in BP [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]': 'Age_BP',
-    'Locality': 'Location',
-    'mtDNA haplogroup': 'Haplogroup'
-})
+clean_df = df[target_columns].copy()
+clean_df.columns = ['Sample_ID', 'Age_BP', 'Locality', 'mtDNA_Haplogroup']
 
-df = df.dropna(subset=['Haplogroup'])
-df = df[~df['Haplogroup'].isin(['..', 'n/a', 'N/A', '-', ''])]
 
-df.to_csv(output_file, sep='\t', index=False)
+clean_df = clean_df[~clean_df['mtDNA_Haplogroup'].isin(['..', 'n/a', 'NaN'])]
+clean_df = clean_df.dropna(subset=['mtDNA_Haplogroup'])
 
-print(f"Process finished!  {len(df)} samples are extracted")
+clean_df.to_csv(output_file, sep='\t', index=False)
+
+print(f"Process finished!  {len(clean_df)} samples are extracted")
 print(f"File saved as: {output_file}")
