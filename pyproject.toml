@@ -1,0 +1,27 @@
+[project]
+name = "mtDNA-matcher"
+version = "0.1.0"
+authors = [
+    { name = "Yaqi Jiao" }
+]
+description = "A tool to find ancient human relatives based on mtDNA haplogroups."
+dependencies = [
+    "pandas",
+    "networkx",
+    "openpyxl"
+]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"mtDNAmatcher" = ["Data/*"]
+
+[tool.setuptools]
+packages = ["mtDNAmatcher"]
+
+[project.scripts]
+mtdna-app = "mtDNAmatcher.mtDNAmatcher:main"
