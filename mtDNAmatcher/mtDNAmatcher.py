@@ -48,8 +48,8 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 
-from infer_haplogroup import load_mutation_tree_from_tsv, infer_best_haplogroup
-from user_data_process import parse_user_dna
+from mtDNAmatcher.infer_haplogroup import load_mutation_tree_from_tsv, infer_best_haplogroup
+from mtDNAmatcher.user_data_process import parse_user_dna
 
 
 # Load background data
