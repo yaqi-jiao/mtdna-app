@@ -47,11 +47,11 @@ target_columns = [
 ]
 
 clean_df = df[target_columns].copy()
-clean_df.columns = ['Sample_ID', 'Age_BP', 'Locality', 'mtDNA_Haplogroup']
+clean_df.columns = ['Sample_ID', 'Age_BP', 'Locality', 'Haplogroup']
 
 
-clean_df = clean_df[~clean_df['mtDNA_Haplogroup'].isin(['..', 'n/a', 'NaN'])]
-clean_df = clean_df.dropna(subset=['mtDNA_Haplogroup'])
+clean_df = clean_df[~clean_df['Haplogroup'].isin(['..', 'n/a', 'NaN'])]
+clean_df = clean_df.dropna(subset=['Haplogroup'])
 
 clean_df.to_csv(output_file, sep='\t', index=False)
 
