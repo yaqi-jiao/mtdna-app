@@ -55,7 +55,7 @@ from mtDNAmatcher.user_data_process import parse_user_dna
 # Load background data
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print("Loading data...")
-aadr_file = os.path.join(BASE_DIR, "Data", "Clean_metadata.tsv") 
+aadr_file = os.path.join(BASE_DIR, "Data", "Clean_metadata_DB.tsv") 
 tree_file = os.path.join(BASE_DIR, "Data", "parsed_mtdna_edges.tsv")
 tree_df = pd.read_csv(tree_file, sep='\t')
 
