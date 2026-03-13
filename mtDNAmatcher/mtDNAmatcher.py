@@ -7,25 +7,39 @@ Date: 9th March, 2026
 mtDNAmatcher.py
 ----------------
 
-Description: This application identifies the closest ancient human relatives based on a user's mtDNA haplogroup.
-    1. Load background data: Reconstructs the mtDNA phylogenetic tree as an undirected graph and loads the ancient DNA database (AADR).
-    2. Read user input: Acquires input from the GUI text entry.
-        - If user input is a file path: Opens the file and extracts the haplogroup string following the "mtDNA: " pattern using regex.
-        - If user input is a standard string: Treats the input directly as the target haplogroup.
-    3. Calculate and Match: Validates the haplogroup, calculates the genetic distance (shortest path in the tree graph) between the user and ancient individuals, and sorts them to find the closest matches.
+This application is an end-to-end bioinformatics pipeline that infers a user's maternal haplogroup 
+    from raw DNA sequencing data and identifies their closest ancient human relatives.
+    
+    1. Load background data: 
+        - Reconstructs the mtDNA phylogenetic tree (Build 17) as an undirected graph for topological distance calculations.
+        - Loads a structured mutation dictionary for rapid haplogroup inference.
+        - Loads the cleaned ancient DNA database (AADR).
+        
+    2. Read user input (Dual Mode): Acquires input from the GUI text entry.
+        - Mode A (Raw DNA File): If a file path is provided, the script parses raw genotype data (e.g., 23andMe format), 
+        extracts valid mtDNA SNPs, and automatically infers the most likely haplogroup by scoring user mutations against 
+        the definitive nodes in the phylogenetic tree.
+        - Mode B (Direct Input): If a standard string is provided, it treats the input directly as the target haplogroup.
+        
+    3. Calculate and Match: 
+        Validates the (inferred or provided) haplogroup, calculates the genetic distance (shortest path in the tree graph) 
+        between the user and ancient individuals, and sorts them to find the closest evolutionary matches.
 
 Input:
     Via GUI text entry. Accepts either:
-    - A string representing an mtDNA haplogroup (e.g., "X2c2").
-    - A valid file path to a text file containing the user's haplogroup in the format "mtDNA: [haplogroup]".
+    - A string representing a valid mtDNA haplogroup (e.g., "H1a", "X2c2").
+    - A valid file path to a raw DNA text file containing genomic coordinates and genotypes (e.g., "TestData/user_test.txt").
 
 Output:
-    Displays the Top 5 closest ancient matches in the GUI text area, including their Sample ID, Genetic distance (steps in the phylogenetic tree), Haplogroup, Period of life (Age BP), and Location of origin.
+    Displays results in the GUI text area:
+    - (If file input): The haplogroup inference process, displaying top candidate haplogroups with confidence scores.
+    - The Top 5 closest ancient matches, including their Sample ID, Genetic distance (steps in the phylogenetic tree), 
+    Haplogroup, Period of life (Age BP), and Location of origin.
 
 Usage Example:
     $ python mtDNAmatcher.py
     # A GUI window will launch. 
-    # Enter "X2" or "C:\\user_results.txt" into the input box and click "Start matching...".
+    # Enter "X2" OR a file path like "C:\\TestData\\user_test.txt" into the input box and click "Start Matching...".
 """
 
 import pandas as pd
@@ -33,13 +47,15 @@ import networkx as nx
 import tkinter as tk
 from tkinter import messagebox
 import os
-import re
+
+from mtDNAmatcher.infer_haplogroup import load_mutation_tree_from_tsv, infer_best_haplogroup
+from mtDNAmatcher.user_data_process import parse_user_dna
 
 
 # Load background data
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print("Loading data...")
-aadr_file = os.path.join(BASE_DIR, "Data", "Clean_metadata.tsv") 
+aadr_file = os.path.join(BASE_DIR, "Data", "Clean_metadata_DB.tsv") 
 tree_file = os.path.join(BASE_DIR, "Data", "parsed_mtdna_edges.tsv")
 tree_df = pd.read_csv(tree_file, sep='\t')
 
@@ -58,6 +74,7 @@ G = nx.Graph()
 for _, row in tree_df.iterrows():
     G.add_edge(row['Parent_Node'], row['Child_Node'])
 valid_hgs = set(G.nodes())
+tree_dict = load_mutation_tree_from_tsv(tree_file)
 
 aadr_df = pd.read_csv(aadr_file, sep='\t')
 aadr_df = aadr_df[aadr_df['Haplogroup'].isin(valid_hgs)].copy()
@@ -78,21 +95,34 @@ def run_match():
     """
     To acquire haplogroup from user input:
     1. Determine if the input is an existing file path
-        if the file exists, use re to extract content after "mtDNA:" as hg_name
+        if the file exists, use [[][]]
     2. If the input is not a file path, then use input as hg_name
     3. Search valid_hgs with user_hg, to make sure the haplogroup exists
     """
     if os.path.isfile(input_text):
         try:
-            with open(input_text, 'r', encoding='utf-8') as f:
-                content = f.read()
-                match = re.search(r'mtDNA:\s*(\S+)', content, re.IGNORECASE)
-                if match:
-                    user_hg = match.group(1)
-                    text_result.insert(tk.END, f"file input identified, extract mtDNA haplogroup: 【{user_hg}】\n\n")
-                else:
-                    text_result.insert(tk.END, "Can find 'mtDNA: XXX' format conten, check file format\n")
-                    return
+            text_result.insert(tk.END, "Raw DNA file detected! Processing...\n")
+            root.update()
+
+            user_snps = parse_user_dna(input_text)
+            text_result.insert(tk.END, f"Extracted {len(user_snps)} valid mtDNA SNPs. Inferring haplogroup...\n")
+            root.update()
+
+            top_matches = infer_best_haplogroup(user_snps, tree_dict)
+
+            text_result.insert(tk.END, "-" * 40 + "\n")
+            text_result.insert(tk.END, "Haplogroup Inference Results:\n")
+            for i, match in enumerate(top_matches):
+                text_result.insert(tk.END, f" Top {i+1}: {match['haplogroup']} (Confidence: {match['score']:.1%})\n")
+            text_result.insert(tk.END, "-" * 40 + "\n")
+
+            if top_matches:
+                user_hg = top_matches[0]['haplogroup']
+                text_result.insert(tk.END, f"\nAuto-selected best match: 【{user_hg}】\n\n")
+            else:
+                text_result.insert(tk.END, "Could not infer haplogroup from the provided file.\n")
+                return
+
         except Exception as e:
             messagebox.showerror("File read error", f"can't read file:\n{e}")
             return
@@ -107,7 +137,6 @@ def run_match():
         text_result.insert(tk.END, f"No haplogroup found '{user_hg}'。\n")
         return
 
-    text_result.insert(tk.END, f"Looking for the ancient people closest to the haplogroup 【{user_hg}】...\n\n")
     
     """
     To find the closest ancient individuals:
@@ -120,6 +149,9 @@ def run_match():
         Save the calculated distances and ancient info into a list, convert to a DataFrame, sort by distance (ascending), and select the Top 5.
     4. Format the output string
     """
+    text_result.insert(tk.END, f"Searching for ancient relatives closest to 【{user_hg}】...\n\n")
+    root.update()
+
     distances = []
     for _, row in aadr_df.iterrows():
         ancient_hg = row['Haplogroup']
@@ -154,10 +186,12 @@ def run_match():
 
 
 def main():
+    global root, entry_hg, text_result
+
     # Draw GUI interface
     root = tk.Tk()
     root.title("mtDNA haplogroup matches system")
-    root.geometry("550x500")
+    root.geometry("600x650")
 
     label_inst = tk.Label(root, text="Please enter the haplogroup (e.g., X2c2) \nor the path to the results file. (e.g., C:\\user.txt):", font=("Arial", 11))
     label_inst.pack(pady=10)

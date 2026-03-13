@@ -12,3 +12,12 @@ dist/
 .venv/
 venv/
 .test_venv/
+
+# microsoft file
+*.docx
+~$*.docx
+~$*.pptx
+
+# specific file
+mtDNAmatcher/Data/23andme*
+mtDNAmatcher/Data/AADR_Annotation_2025.xlsx
