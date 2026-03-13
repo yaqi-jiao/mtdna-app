@@ -47,7 +47,7 @@ target_columns = [
 ]
 
 clean_df = df[target_columns].copy()
-clean_df.columns = ['Sample_ID', 'Age_BP', 'Locality', 'Haplogroup']
+clean_df.columns = ['Sample_ID', 'Age_BP', 'Location', 'Haplogroup']
 
 
 clean_df = clean_df[~clean_df['Haplogroup'].isin(['..', 'n/a', 'NaN'])]
